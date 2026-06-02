@@ -143,15 +143,15 @@ const app = {
 
         try {
             // Appel à la fonction d'authentification (déduite de l'architecture)
-            const authResponse = await this.apiCall('authenticate', { username, password, totp });
+            const authResponse = await this.apiCall('authenticate', { username, password, totp_code: totp });
 
             if (authResponse.ok) {
                 this.showAlert("Authentification réussie ! Bienvenue.", "success");
                 // Logique post-login (ex: redirection, stockage du JWT, etc.)
             } else {
                 // Vérifier si l'erreur est liée à l'expiration (> 6 mois)
-                // On suppose ici que le backend renvoie un code spécifique ou un flag
-                const isExpired = authResponse.status === 403 && authResponse.data.expired === true;
+                // Le backend renvoie { "status": "expired" } en HTTP 403
+                const isExpired = authResponse.status === 403 && authResponse.data.status === "expired";
                 
                 if (isExpired || (authResponse.data.message && authResponse.data.message.toLowerCase().includes('expiré'))) {
                     // Bascule vers la vue de renouvellement
