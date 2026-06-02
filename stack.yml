@@ -1,0 +1,29 @@
+version: 1.0
+provider:
+  name: openfaas
+  gateway: http://127.0.0.1:8080  # remplacer par l'IP du LoadBalancer K3s
+
+functions:
+  generate-password:
+    lang: python3-http
+    handler: ./functions/generate-password
+    image: DOCKER_USERNAME/generate-password:latest  # remplacer DOCKER_USERNAME
+    secrets:
+      - db-credentials
+      - encryption-key
+
+  generate-2fa:
+    lang: python3-http
+    handler: ./functions/generate-2fa
+    image: DOCKER_USERNAME/generate-2fa:latest
+    secrets:
+      - db-credentials
+      - encryption-key
+
+  authenticate:
+    lang: python3-http
+    handler: ./functions/authenticate
+    image: DOCKER_USERNAME/authenticate:latest
+    secrets:
+      - db-credentials
+      - encryption-key
