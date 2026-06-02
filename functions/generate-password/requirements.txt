@@ -1,0 +1,4 @@
+cryptography==42.0.5
+psycopg2-binary==2.9.9
+qrcode==7.4.2
+Pillow==10.3.0
