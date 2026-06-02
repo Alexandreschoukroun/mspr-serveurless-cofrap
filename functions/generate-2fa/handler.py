@@ -23,7 +23,6 @@ import io
 import base64
 
 import psycopg2
-import psycopg2.errors
 import pyotp
 import qrcode
 from cryptography.fernet import Fernet
