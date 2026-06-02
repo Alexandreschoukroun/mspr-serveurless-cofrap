@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.env
+venv/
+.venv/
+
+# OpenFaaS build artifacts
+build/
+template/
+
+# Secrets — ne jamais committer
+*.key
+secrets.yml
+.secrets/
+
+# OS
+.DS_Store
+Thumbs.db
