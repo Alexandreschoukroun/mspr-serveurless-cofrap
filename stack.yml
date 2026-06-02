@@ -1,13 +1,13 @@
 version: 1.0
 provider:
   name: openfaas
-  gateway: http://127.0.0.1:8080  # remplacer par l'IP du LoadBalancer K3s
+  gateway: http://openfaas.k3s.homelab  # remplacer par l'IP du LoadBalancer K3s
 
 functions:
   generate-password:
     lang: python3-http
     handler: ./functions/generate-password
-    image: DOCKER_USERNAME/generate-password:latest  # remplacer DOCKER_USERNAME
+    image: ghcr.io/alexandreschoukroun/generate-password:latest
     secrets:
       - db-credentials
       - encryption-key
@@ -15,7 +15,7 @@ functions:
   generate-2fa:
     lang: python3-http
     handler: ./functions/generate-2fa
-    image: DOCKER_USERNAME/generate-2fa:latest
+    image: ghcr.io/alexandreschoukroun/generate-2fa:latest
     secrets:
       - db-credentials
       - encryption-key
@@ -23,7 +23,7 @@ functions:
   authenticate:
     lang: python3-http
     handler: ./functions/authenticate
-    image: DOCKER_USERNAME/authenticate:latest
+    image: ghcr.io/alexandreschoukroun/authenticate:latest
     secrets:
       - db-credentials
       - encryption-key

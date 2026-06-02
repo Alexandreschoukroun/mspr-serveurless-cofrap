@@ -1,0 +1,79 @@
+name: Build & Deploy OpenFaaS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  # ── Build + Push ────────────────────────────────────────────────────────────
+  build-push:
+    name: Build & Push images
+    runs-on: arc-runner-set-cofrap
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install faas-cli
+        run: |
+          if [ -x k8s/faas-cli ]; then
+            sudo cp k8s/faas-cli /usr/local/bin/faas-cli
+          else
+            curl -sSL https://cli.openfaas.com | sudo sh
+          fi
+
+      - name: Pull python3-http template
+        run: faas-cli template store pull python3-http
+
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: Alexandreschoukroun
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build images
+        run: faas-cli build -f stack.yml
+
+      - name: Push images
+        run: faas-cli push -f stack.yml
+
+  # ── Deploy ──────────────────────────────────────────────────────────────────
+  deploy:
+    name: Deploy to OpenFaaS
+    runs-on: arc-runner-set-cofrap
+    needs: build-push
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install faas-cli
+        run: |
+          if [ -x k8s/faas-cli ]; then
+            sudo cp k8s/faas-cli /usr/local/bin/faas-cli
+          else
+            curl -sSL https://cli.openfaas.com | sudo sh
+          fi
+
+      - name: Pull python3-http template
+        run: faas-cli template store pull python3-http
+
+      - name: Login to OpenFaaS gateway
+        run: |
+          faas-cli login \
+            --username admin \
+            --password "${{ secrets.OPENFAAS_PASSWORD }}" \
+            --gateway "${{ secrets.OPENFAAS_URL }}"
+
+      - name: Deploy functions
+        run: |
+          faas-cli deploy -f stack.yml \
+            --gateway "${{ secrets.OPENFAAS_URL }}"

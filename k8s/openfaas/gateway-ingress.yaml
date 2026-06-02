@@ -1,0 +1,42 @@
+# Ingress Traefik pour le gateway OpenFaaS
+# K3s embarque Traefik v2 — aucune installation supplémentaire requise.
+#
+# Domaine géré via Cloudflare : créer un enregistrement A pointant vers l'IP
+# externe du nœud GCP, avec le proxy Cloudflare activé (nuage orange).
+#
+# Remplacer openfaas.cofrap.example.com par le sous-domaine choisi,
+# ex : openfaas.cofrap.example.com
+#
+# Mode TLS Cloudflare :
+#   - Flexible (défaut) : Cloudflare ↔ cluster en HTTP → aucune config TLS ici
+#   - Full / Full Strict : Cloudflare ↔ cluster en HTTPS → décommenter la section
+#     tls: ci-dessous et installer cert-manager (voir README étape 3)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: openfaas-gateway
+  namespace: openfaas
+  annotations:
+    # kubernetes.io/ingress.class: traefik
+    traefik.ingress.kubernetes.io/router.middlewares: openfaas-cors-headers@kubernetescrd
+    # Activer uniquement en mode Cloudflare Full/Full Strict (HTTPS vers l'origine)
+    # traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    # traefik.ingress.kubernetes.io/router.tls: "true"
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: openfaas.k3s.homelab
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: gateway
+                port:
+                  number: 8080
+  # Décommenter en mode Cloudflare Full Strict avec cert-manager :
+  # tls:
+  #   - hosts:
+  #       - openfaas.cofrap.example.com
+  #     secretName: openfaas-gateway-tls
