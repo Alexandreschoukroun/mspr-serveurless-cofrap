@@ -36,6 +36,10 @@ const app = {
 
     // Navigation entre les vues
     showView(viewName) {
+        // Remet le champ mot de passe masqué si on quitte la vue auth
+        const pwdInput = document.getElementById('auth-password');
+        if (pwdInput && pwdInput.type === 'text') this.togglePassword();
+
         // Masquer toutes les vues
         document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
         // Afficher la vue demandée
@@ -79,6 +83,22 @@ const app = {
             console.error(`Erreur réseau sur ${endpoint}:`, error);
             return { ok: false, status: 500, data: { message: "Erreur de connexion au serveur." } };
         }
+    },
+
+    // =========================================================
+    // UI HELPERS
+    // =========================================================
+
+    togglePassword() {
+        const input = document.getElementById('auth-password');
+        const icon = document.getElementById('toggle-password-icon');
+        const btn = document.getElementById('btn-toggle-password');
+        const isHidden = input.type === 'password';
+
+        input.type = isHidden ? 'text' : 'password';
+        icon.className = isHidden ? 'bi bi-eye-slash' : 'bi bi-eye';
+        btn.setAttribute('aria-pressed', isHidden);
+        btn.setAttribute('aria-label', isHidden ? 'Masquer le mot de passe' : 'Afficher le mot de passe');
     },
 
     // =========================================================
