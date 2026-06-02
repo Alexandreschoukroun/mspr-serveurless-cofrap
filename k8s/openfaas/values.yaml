@@ -1,0 +1,48 @@
+# Helm values pour le chart openfaas/openfaas
+# Repo : https://openfaas.github.io/faas-netes/
+#
+# Optimisé pour un cluster K3s sur 2 VMs GCP e2-small.
+# Prometheus/Alertmanager désactivés pour économiser les ressources.
+
+# --- Authentification -------------------------------------------------------
+# Génère automatiquement un secret basic-auth (user: admin, mdp: aléatoire).
+# Récupérer le mot de passe après install :
+#   kubectl get secret -n openfaas basic-auth \
+#     -o jsonpath="{.data.basic-auth-password}" | base64 -d
+generateBasicAuth: true
+
+# --- Namespaces -------------------------------------------------------------
+functionNamespace: openfaas-fn
+
+# --- Gateway ----------------------------------------------------------------
+gateway:
+  replicas: 1
+  # Timeouts : upstreamTimeout doit être < readTimeout/writeTimeout
+  readTimeout: "65s"
+  writeTimeout: "65s"
+  upstreamTimeout: "60s"
+  # Désactive le TLS interne gateway→function (géré par Traefik en entrée)
+  directFunctions: true
+
+# --- Contrôleur faas-netes (mode standard, sans CRD operator) ---------------
+operator:
+  create: false
+
+faasnetes:
+  imagePullPolicy: "Always"
+
+# --- Monitoring (désactivé sur petit cluster) --------------------------------
+# Réactiver si besoin d'alertes ou de dashboards Grafana.
+alertmanager:
+  create: false
+
+prometheus:
+  create: false
+
+# --- Scaling automatique ----------------------------------------------------
+# Min replicas = 0 permet de scale-to-zero (économie de ressources).
+# Les fonctions démarrent en ~2s au premier appel.
+faasIdler:
+  create: true
+  inactivityDuration: "5m"
+  reconcileInterval: "30s"

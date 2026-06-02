@@ -5,7 +5,7 @@
 
 const app = {
     // URL de l'API Gateway OpenFaaS (A configurer selon l'environnement, ici par défaut local/K3s)
-    API_BASE_URL: "http://127.0.0.1:8080/function",
+    API_BASE_URL: "http://openfaas.cofrap.example.com/function",
 
     // Initialisation
     init() {

@@ -1,0 +1,47 @@
+# Helm values pour le chart bitnami/postgresql
+# Repo : https://charts.bitnami.com/bitnami
+#
+# Déploie PostgreSQL 16 dans le namespace openfaas-fn pour que les fonctions
+# puissent le joindre via le nom DNS interne : postgresql.openfaas-fn.svc.cluster.local
+
+# --- Authentification -------------------------------------------------------
+# IMPORTANT : remplacer toutes les valeurs <...> avant le déploiement,
+# puis stocker les mots de passe dans le secret K8s db-credentials (voir secrets/).
+auth:
+  postgresPassword: "chagemedev"
+  username: "cofrapuser"
+  password: "changemedev"
+  database: "cofrapdb"
+
+# --- Primary node -----------------------------------------------------------
+primary:
+  persistence:
+    enabled: true
+    size: 2Gi
+    # storageClass: "" # laisser vide pour utiliser le StorageClass par défaut de K3s (local-path)
+
+  # Schéma initial : exécuté UNE SEULE FOIS à la création du pod PostgreSQL.
+  # Crée la table users utilisée par les trois fonctions COFRAP.
+  initdb:
+    scripts:
+      01-schema.sql: |
+        CREATE TABLE IF NOT EXISTS users (
+            id        SERIAL       PRIMARY KEY,
+            username  VARCHAR(100) UNIQUE NOT NULL,
+            password  TEXT         NOT NULL,
+            mfa       TEXT         DEFAULT '',
+            gendate   BIGINT       DEFAULT 0,
+            expired   SMALLINT     DEFAULT 0
+        );
+
+  # Ressources adaptées à un nœud e2-small (~2 Go RAM)
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+# --- Readiness / liveness ---------------------------------------------------
+# Valeurs par défaut Bitnami conservées — pas de surcharge nécessaire.
