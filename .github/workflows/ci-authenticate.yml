@@ -1,0 +1,30 @@
+name: CI — authenticate
+
+on:
+  push:
+    branches:
+      - main
+      - feat/authenticate
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r functions/authenticate/requirements.txt
+
+      # SQLite est utilisé comme mock BDD — pas besoin de PostgreSQL
+      - name: Run tests
+        run: python functions/authenticate/test_local.py
