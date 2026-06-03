@@ -45,6 +45,12 @@ jobs:
       - name: Push images
         run: faas-cli push -f stack.yml
 
+      - name: Build frontend image
+        run: docker build -t ghcr.io/alexandreschoukroun/cofrap-frontend:latest frontend/
+
+      - name: Push frontend image
+        run: docker push ghcr.io/alexandreschoukroun/cofrap-frontend:latest
+
   # ── Deploy ──────────────────────────────────────────────────────────────────
   deploy:
     name: Deploy to OpenFaaS
@@ -67,13 +73,44 @@ jobs:
         run: faas-cli template store pull python3-http
 
       - name: Login to OpenFaaS gateway
+        env:
+          OPENFAAS_URL: ${{ secrets.OPENFAAS_URL }}
+          OPENFAAS_PASSWORD: ${{ secrets.OPENFAAS_PASSWORD }}
         run: |
           faas-cli login \
             --username admin \
-            --password "${{ secrets.OPENFAAS_PASSWORD }}" \
-            --gateway "${{ secrets.OPENFAAS_URL }}"
+            --password "$OPENFAAS_PASSWORD" \
+            --gateway "$OPENFAAS_URL"
 
       - name: Deploy functions
+        env:
+          OPENFAAS_URL: ${{ secrets.OPENFAAS_URL }}
         run: |
           faas-cli deploy -f stack.yml \
-            --gateway "${{ secrets.OPENFAAS_URL }}"
+            --gateway "$OPENFAAS_URL"
+
+  # ── Deploy Frontend ──────────────────────────────────────────────────────────
+  deploy-frontend:
+    name: Deploy frontend to k3s
+    runs-on: arc-runner-set-cofrap
+    needs: build-push
+    environment: production
+    container:
+      image: bitnami/kubectl:latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p "$HOME/.kube"
+          printf '%s' "${{ secrets.KUBECONFIG }}" > "$HOME/.kube/config"
+          chmod 600 "$HOME/.kube/config"
+
+      - name: Deploy frontend to k3s
+        run: |
+          kubectl apply -f k8s/frontend/namespace.yaml
+          kubectl apply -f k8s/frontend/configmap.yaml
+          kubectl apply -f k8s/frontend/deployment.yaml
+          kubectl apply -f k8s/frontend/ingress.yaml
+          kubectl rollout status deploy/cofrap-frontend -n cofrap --timeout=120s

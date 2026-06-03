@@ -4,8 +4,8 @@
  */
 
 const app = {
-    // URL de l'API Gateway OpenFaaS (A configurer selon l'environnement, ici par défaut local/K3s)
-    API_BASE_URL: "http://openfaas.cofrap.example.com/function",
+    // URL du gateway OpenFaaS — surchargeable via config.js monté depuis un ConfigMap k8s
+    API_BASE_URL: (window.COFRAP_CONFIG && window.COFRAP_CONFIG.OPENFAAS_URL) || "http://openfaas.k3s.homelab/function",
 
     // Initialisation
     init() {

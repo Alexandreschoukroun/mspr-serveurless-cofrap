@@ -1,0 +1,23 @@
+# Ingress Traefik pour le frontend COFRAP
+# Ajouter dans /etc/hosts (ou DNS local) :
+#   <IP_NOEUD_K3S>  cofrap.k3s.homelab
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cofrap-frontend
+  namespace: cofrap
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: cofrap.k3s.homelab
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: cofrap-frontend
+                port:
+                  number: 80
