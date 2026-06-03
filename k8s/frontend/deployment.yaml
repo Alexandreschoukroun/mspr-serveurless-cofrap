@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cofrap-frontend
+  namespace: cofrap
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cofrap-frontend
+  template:
+    metadata:
+      labels:
+        app: cofrap-frontend
+    spec:
+      containers:
+        - name: frontend
+          image: ghcr.io/alexandreschoukroun/cofrap-frontend:latest
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: config
+              mountPath: /usr/share/nginx/html/config.js
+              subPath: config.js
+      volumes:
+        - name: config
+          configMap:
+            name: frontend-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cofrap-frontend
+  namespace: cofrap
+spec:
+  selector:
+    app: cofrap-frontend
+  ports:
+    - port: 80
+      targetPort: 80
