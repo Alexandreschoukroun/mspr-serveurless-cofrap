@@ -305,7 +305,7 @@ référencées dans `stack.yml`.
 
 | Fonction | Rôle | Entrée (JSON) | Sortie (JSON) |
 |---|---|---|---|
-| `generate-password` | Crée un utilisateur en BDD, génère un mot de passe chiffré (Fernet) et retourne un QR code PNG (affiché **une seule fois**) | `{"username": "alice"}` | `{"qr_password": "<base64 PNG>", "status": "ok"}` |
+| `generate-password` | Crée un utilisateur en BDD, génère un mot de passe chiffré (Fernet) et retourne un QR code PNG ainsi que le mot de passe en clair (affichés **une seule fois**) | `{"username": "alice"}` | `{"qr_password": "<base64 PNG>", "password": "...", "status": "ok"}` |
 | `generate-2fa` | Génère un secret TOTP pour un utilisateur existant, le chiffre en BDD et retourne un QR code compatible Google Authenticator | `{"username": "alice"}` | `{"qr_2fa": "<base64 PNG>", "status": "ok"}` |
 | `authenticate` | Vérifie l'identité : mot de passe + TOTP + expiration du compte (> 6 mois) | `{"username": "alice", "password": "...", "totp_code": "123456"}` | `{"status": "ok"\|"expired"\|"error", "message": "..."}` |
 
@@ -378,7 +378,7 @@ curl -u admin:"$OPENFAAS_PASSWORD" \
   -X POST https://<GATEWAY_HOSTNAME>/function/generate-password \
   -H "Content-Type: application/json" \
   -d '{"username": "testuser"}'
-# Attendu : {"qr_password": "<base64>", "status": "ok"}
+# Attendu : {"qr_password": "<base64>", "password": "...", "status": "ok"}
 
 # 2. Activer le 2FA (retourne un QR code otpauth:// pour Google Authenticator)
 curl -u admin:"$OPENFAAS_PASSWORD" \

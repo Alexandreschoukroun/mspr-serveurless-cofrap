@@ -4,7 +4,7 @@
 #        et retourner ce mot de passe sous forme de QR code (affiché UNE seule fois)
 #
 # Entrée  (JSON) : { "username": "alice" }
-# Sortie  (JSON) : { "qr_password": "<base64 PNG>", "status": "ok" }
+# Sortie  (JSON) : { "qr_password": "<base64 PNG>", "password": "<mot de passe en clair>", "status": "ok" }
 #
 # Flux complet :
 #   1. Reçoit un username via POST HTTP
@@ -149,8 +149,11 @@ def handle(event, context):
     # ------------------------------------------------------------------
     # ÉTAPE 6 — Réponse JSON au frontend
     # Le frontend affichera l'image avec : <img src="data:image/png;base64,{qr_password}">
+    # Le champ "password" (texte en clair) est renvoyé en plus du QR code pour permettre
+    # une alternative accessible aux personnes ne pouvant pas scanner/lire un QR code
+    # (déficience visuelle, absence de second appareil, etc.).
     # ------------------------------------------------------------------
     return {
         "statusCode": 200,
-        "body": json.dumps({"qr_password": qr_b64, "status": "ok"}),
+        "body": json.dumps({"qr_password": qr_b64, "password": password, "status": "ok"}),
     }
