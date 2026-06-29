@@ -22,6 +22,64 @@
             padding: 0.25rem;
             background-color: #fff;
         }
+
+        /* Mode daltonien : remplace les teintes rouge/vert/jaune par des palettes
+           issues du jeu de couleurs universel d'Okabe-Ito, choisies pour rester
+           distinguables selon le type de daltonisme sélectionné dans la navbar. */
+        body.colorblind-protanopia {
+            --cb-success: #0072B2; --cb-success-dark: #005a8c; --cb-success-bg: #cfe8f3; --cb-success-text: #003b5c;
+            --cb-danger: #E69F00; --cb-danger-dark: #b87f00; --cb-danger-bg: #fdecd2; --cb-danger-text: #5c4400;
+            --cb-warning: #F0E442; --cb-warning-dark: #c8be00; --cb-warning-bg: #fdfbcf; --cb-warning-text: #544f00;
+        }
+        body.colorblind-deuteranopia {
+            --cb-success: #56B4E9; --cb-success-dark: #2f97d1; --cb-success-bg: #d9eefb; --cb-success-text: #003b5c;
+            --cb-danger: #D55E00; --cb-danger-dark: #aa4b00; --cb-danger-bg: #fbe3cf; --cb-danger-text: #5c2700;
+            --cb-warning: #F0E442; --cb-warning-dark: #c8be00; --cb-warning-bg: #fdfbcf; --cb-warning-text: #544f00;
+        }
+        body.colorblind-tritanopia {
+            --cb-success: #009E73; --cb-success-dark: #00795a; --cb-success-bg: #cdf0e6; --cb-success-text: #00422f;
+            --cb-danger: #CC79A7; --cb-danger-dark: #a35c84; --cb-danger-bg: #f6e2ec; --cb-danger-text: #5c2740;
+            --cb-warning: #E69F00; --cb-warning-dark: #b87f00; --cb-warning-bg: #fdecd2; --cb-warning-text: #5c4400;
+        }
+
+        body[class*="colorblind-"] .bg-success,
+        body[class*="colorblind-"] .btn-success {
+            background-color: var(--cb-success) !important;
+            border-color: var(--cb-success) !important;
+        }
+        body[class*="colorblind-"] .btn-success:hover,
+        body[class*="colorblind-"] .btn-success:focus {
+            background-color: var(--cb-success-dark) !important;
+            border-color: var(--cb-success-dark) !important;
+        }
+        body[class*="colorblind-"] .bg-danger,
+        body[class*="colorblind-"] .btn-danger,
+        body[class*="colorblind-"] .border-danger {
+            background-color: var(--cb-danger) !important;
+            border-color: var(--cb-danger) !important;
+        }
+        body[class*="colorblind-"] .btn-danger:hover,
+        body[class*="colorblind-"] .btn-danger:focus {
+            background-color: var(--cb-danger-dark) !important;
+            border-color: var(--cb-danger-dark) !important;
+        }
+        body[class*="colorblind-"] .text-success { color: var(--cb-success) !important; }
+        body[class*="colorblind-"] .text-danger { color: var(--cb-danger) !important; }
+        body[class*="colorblind-"] .alert-success {
+            background-color: var(--cb-success-bg) !important;
+            border-color: var(--cb-success) !important;
+            color: var(--cb-success-text) !important;
+        }
+        body[class*="colorblind-"] .alert-danger {
+            background-color: var(--cb-danger-bg) !important;
+            border-color: var(--cb-danger) !important;
+            color: var(--cb-danger-text) !important;
+        }
+        body[class*="colorblind-"] .alert-warning {
+            background-color: var(--cb-warning-bg) !important;
+            border-color: var(--cb-warning) !important;
+            color: var(--cb-warning-text) !important;
+        }
     </style>
 </head>
 <body class="bg-light">
@@ -41,6 +99,21 @@
                         <button class="nav-link btn btn-link text-decoration-none" id="nav-create" onclick="app.showView('create')">Inscription</button>
                     </li>
                 </ul>
+                <div class="dropdown ms-auto">
+                    <button class="btn btn-light btn-sm rounded-circle border-0 d-flex align-items-center justify-content-center p-0" type="button" id="accessibility-menu-btn" style="width: 36px; height: 36px; font-size: 1.1rem;" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" aria-label="Options d'accessibilité" title="Accessibilité">
+                        <span aria-hidden="true">♿</span>
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-end p-3" aria-labelledby="accessibility-menu-btn" style="min-width: 250px;">
+                        <h3 class="h6 dropdown-header px-0">Accessibilité</h3>
+                        <label for="colorblind-select" class="form-label small">Mode daltonien</label>
+                        <select class="form-select form-select-sm" id="colorblind-select" onchange="app.setColorblindMode(this.value)">
+                            <option value="none">Aucun</option>
+                            <option value="protanopia">Protanopie (rouge)</option>
+                            <option value="deuteranopia">Deutéranopie (vert)</option>
+                            <option value="tritanopia">Tritanopie (bleu-jaune)</option>
+                        </select>
+                    </div>
+                </div>
             </div>
         </div>
     </nav>
@@ -75,8 +148,17 @@
                                 <div class="mb-3">
                                     <strong>1. Votre Mot de Passe</strong><br>
                                     <img id="qr-password-img" src="" alt="QR Code du mot de passe" class="qr-code-img mt-2">
+                                    <div class="mt-2">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-toggle-password-create" aria-pressed="false" aria-controls="password-plain-create" onclick="app.togglePasswordVisibility('create')">
+                                            Afficher le mot de passe en clair
+                                        </button>
+                                        <div id="password-plain-create" class="input-group mt-2 d-none">
+                                            <input type="text" class="form-control font-monospace" id="password-plain-input-create" readonly aria-label="Mot de passe en clair">
+                                            <button class="btn btn-outline-secondary" type="button" onclick="app.copyPassword('create')">Copier</button>
+                                        </div>
+                                    </div>
                                 </div>
-                                
+
                                 <div>
                                     <strong>2. Votre Token 2FA (TOTP)</strong><br>
                                     <img id="qr-2fa-img" src="" alt="QR Code de l'authentification à deux facteurs" class="qr-code-img mt-2">
@@ -144,6 +226,15 @@
                                 <div class="mb-3">
                                     <strong>Nouveau Mot de Passe</strong><br>
                                     <img id="renew-qr-password-img" src="" alt="Nouveau QR Code du mot de passe" class="qr-code-img mt-2">
+                                    <div class="mt-2">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-toggle-password-renew" aria-pressed="false" aria-controls="password-plain-renew" onclick="app.togglePasswordVisibility('renew')">
+                                            Afficher le mot de passe en clair
+                                        </button>
+                                        <div id="password-plain-renew" class="input-group mt-2 d-none">
+                                            <input type="text" class="form-control font-monospace" id="password-plain-input-renew" readonly aria-label="Mot de passe en clair">
+                                            <button class="btn btn-outline-secondary" type="button" onclick="app.copyPassword('renew')">Copier</button>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div>
                                     <strong>Nouveau Token 2FA</strong><br>

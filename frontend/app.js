@@ -7,9 +7,13 @@ const app = {
     // URL du gateway OpenFaaS — surchargeable via config.js monté depuis un ConfigMap k8s
     API_BASE_URL: (window.COFRAP_CONFIG && window.COFRAP_CONFIG.OPENFAAS_URL) || "http://openfaas.k3s.homelab/function",
 
+    // Clé de sauvegarde de la préférence "mode daltonien" dans le navigateur
+    COLORBLIND_STORAGE_KEY: 'cofrap_colorblind_mode',
+
     // Initialisation
     init() {
         this.bindEvents();
+        this.applyColorblindMode(localStorage.getItem(this.COLORBLIND_STORAGE_KEY) || 'none');
         this.showView('auth'); // Vue par défaut
     },
 
@@ -60,6 +64,45 @@ const app = {
     hideAlert() {
         const alertBox = document.getElementById('global-alert');
         alertBox.classList.add('d-none');
+    },
+
+    // Change le mode daltonien parmi : 'none', 'protanopia', 'deuteranopia', 'tritanopia'
+    // et mémorise la préférence pour les prochaines visites.
+    setColorblindMode(mode) {
+        this.applyColorblindMode(mode);
+        localStorage.setItem(this.COLORBLIND_STORAGE_KEY, mode);
+    },
+
+    applyColorblindMode(mode) {
+        document.body.classList.remove('colorblind-protanopia', 'colorblind-deuteranopia', 'colorblind-tritanopia');
+        if (mode && mode !== 'none') {
+            document.body.classList.add(`colorblind-${mode}`);
+        }
+        const select = document.getElementById('colorblind-select');
+        if (select) select.value = mode || 'none';
+    },
+
+    // Affiche/masque le mot de passe en clair pour la vue 'create' ou 'renew'
+    togglePasswordVisibility(view) {
+        const container = document.getElementById(`password-plain-${view}`);
+        const btn = document.getElementById(`btn-toggle-password-${view}`);
+        const isHidden = container.classList.contains('d-none');
+
+        container.classList.toggle('d-none', !isHidden);
+        btn.setAttribute('aria-pressed', String(isHidden));
+        btn.textContent = isHidden ? 'Masquer le mot de passe en clair' : 'Afficher le mot de passe en clair';
+    },
+
+    // Copie le mot de passe en clair dans le presse-papiers
+    async copyPassword(view) {
+        const input = document.getElementById(`password-plain-input-${view}`);
+        try {
+            await navigator.clipboard.writeText(input.value);
+            this.showAlert('Mot de passe copié dans le presse-papiers.', 'success');
+        } catch (error) {
+            console.error('Erreur lors de la copie du mot de passe:', error);
+            this.showAlert('Impossible de copier automatiquement, veuillez sélectionner le texte manuellement.', 'warning');
+        }
     },
 
     // Helper pour les appels API
@@ -113,7 +156,11 @@ const app = {
             // Succès : Affichage des QR Codes
             document.getElementById('qr-password-img').src = `data:image/png;base64,${pwdResponse.data.qr_password}`;
             document.getElementById('qr-2fa-img').src = `data:image/png;base64,${mfaResponse.data.qr_2fa}`;
-            
+            document.getElementById('password-plain-input-create').value = pwdResponse.data.password || '';
+            document.getElementById('password-plain-create').classList.add('d-none');
+            document.getElementById('btn-toggle-password-create').setAttribute('aria-pressed', 'false');
+            document.getElementById('btn-toggle-password-create').textContent = 'Afficher le mot de passe en clair';
+
             document.getElementById('create-qr-container').classList.remove('d-none');
             this.showAlert("Compte créé avec succès. Veuillez scanner vos QR Codes.", "success");
             
@@ -199,7 +246,11 @@ const app = {
             // Affichage des nouveaux QR Codes
             document.getElementById('renew-qr-password-img').src = `data:image/png;base64,${pwdResponse.data.qr_password}`;
             document.getElementById('renew-qr-2fa-img').src = `data:image/png;base64,${mfaResponse.data.qr_2fa}`;
-            
+            document.getElementById('password-plain-input-renew').value = pwdResponse.data.password || '';
+            document.getElementById('password-plain-renew').classList.add('d-none');
+            document.getElementById('btn-toggle-password-renew').setAttribute('aria-pressed', 'false');
+            document.getElementById('btn-toggle-password-renew').textContent = 'Afficher le mot de passe en clair';
+
             document.getElementById('renew-qr-container').classList.remove('d-none');
             this.showAlert("Renouvellement réussi. Scannez vos nouveaux codes.", "success");
 
