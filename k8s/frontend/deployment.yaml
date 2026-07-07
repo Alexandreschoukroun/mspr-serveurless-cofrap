@@ -16,6 +16,7 @@ spec:
       containers:
         - name: frontend
           image: ghcr.io/alexandreschoukroun/cofrap-frontend:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 80
           volumeMounts:
