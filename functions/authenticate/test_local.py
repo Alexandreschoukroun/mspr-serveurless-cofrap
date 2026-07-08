@@ -1,6 +1,6 @@
 """
-Test local avec une base SQLite en mémoire (pas besoin de PostgreSQL ni OpenFaaS).
-Lance avec : python test_local.py
+Local test using an in-memory SQLite database (no need for PostgreSQL or OpenFaaS).
+Run with: python test_local.py
 """
 import json
 import os
@@ -12,9 +12,9 @@ from cryptography.fernet import Fernet
 import pyotp
 
 # ---------------------------------------------------------------------------
-# Adaptateur SQLite → interface psycopg2
-# handler.py utilise %s comme placeholder (style psycopg2) ;
-# SQLite attend ? — on traduit à la volée dans le curseur.
+# SQLite adapter -> psycopg2 interface
+# handler.py uses %s as a placeholder (psycopg2 style);
+# SQLite expects ? — we translate it on the fly in the cursor.
 # ---------------------------------------------------------------------------
 
 class _Cursor:
@@ -57,7 +57,7 @@ class _Conn:
 
 
 # ---------------------------------------------------------------------------
-# Préparation de la base SQLite et des données de test
+# SQLite database and test data setup
 # ---------------------------------------------------------------------------
 
 key = Fernet.generate_key()
@@ -69,7 +69,7 @@ plain_password = "MonMotDePasse24CharsXXXX"
 enc_password = fernet.encrypt(plain_password.encode()).decode()
 enc_mfa = fernet.encrypt(totp_secret.encode()).decode()
 
-# Crée la table users dans SQLite (schéma identique à PostgreSQL)
+# Creates the users table in SQLite (same schema as PostgreSQL)
 _sqlite = sqlite3.connect(":memory:")
 _sqlite.execute("""
     CREATE TABLE users (
@@ -84,7 +84,7 @@ _sqlite.execute(
     "INSERT INTO users VALUES (?, ?, ?, ?, ?)",
     ("alice", enc_password, enc_mfa, int(time.time()) - 3600, 0),
 )
-# Compte expiré : créé il y a 200 jours
+# Expired account: created 200 days ago
 _sqlite.execute(
     "INSERT INTO users VALUES (?, ?, ?, ?, ?)",
     ("bob", enc_password, enc_mfa, int(time.time()) - 200 * 86400, 0),
@@ -93,7 +93,7 @@ _sqlite.commit()
 
 db_adapter = _Conn(_sqlite)
 
-# Variables d'environnement simulant les secrets K8s
+# Environment variables simulating K8s secrets
 os.environ["FERNET_KEY"] = key.decode()
 os.environ["DB_HOST"] = "localhost"
 os.environ["DB_NAME"] = "cofrapdb"
@@ -128,7 +128,7 @@ def run_test(label, payload, expected_status, expected_http):
 
 
 # ---------------------------------------------------------------------------
-# Cas de test
+# Test cases
 # ---------------------------------------------------------------------------
 
 print("\n=== Tests authenticate ===\n")
@@ -136,37 +136,37 @@ print("\n=== Tests authenticate ===\n")
 totp_now = pyotp.TOTP(totp_secret).now()
 
 run_test(
-    "Auth réussie",
+    "Successful auth",
     {"username": "alice", "password": plain_password, "totp_code": totp_now},
     "ok", 200,
 )
 run_test(
-    "Mauvais mot de passe",
+    "Wrong password",
     {"username": "alice", "password": "wrong_password", "totp_code": totp_now},
     "error", 401,
 )
 run_test(
-    "Mauvais code TOTP",
+    "Wrong TOTP code",
     {"username": "alice", "password": plain_password, "totp_code": "000000"},
     "error", 401,
 )
 run_test(
-    "Utilisateur inexistant",
+    "Nonexistent user",
     {"username": "inconnu", "password": plain_password, "totp_code": totp_now},
     "error", 401,
 )
 run_test(
-    "Compte expiré (>183 jours)",
+    "Expired account (>183 days)",
     {"username": "bob", "password": plain_password, "totp_code": pyotp.TOTP(totp_secret).now()},
     "expired", 403,
 )
 run_test(
-    "Champs manquants",
+    "Missing fields",
     {"username": "alice"},
     "error", 400,
 )
 run_test(
-    "JSON invalide",
+    "Invalid JSON",
     "pas du json",
     "error", 400,
 )

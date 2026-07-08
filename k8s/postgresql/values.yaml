@@ -1,12 +1,12 @@
-# Helm values pour le chart bitnami/postgresql
-# Repo : https://charts.bitnami.com/bitnami
+# Helm values for the bitnami/postgresql chart
+# Repo: https://charts.bitnami.com/bitnami
 #
-# Déploie PostgreSQL 16 dans le namespace openfaas-fn pour que les fonctions
-# puissent le joindre via le nom DNS interne : postgresql.openfaas-fn.svc.cluster.local
+# Deploys PostgreSQL 16 in the openfaas-fn namespace so the functions
+# can reach it via the internal DNS name: postgresql.openfaas-fn.svc.cluster.local
 
-# --- Authentification -------------------------------------------------------
-# IMPORTANT : remplacer toutes les valeurs <...> avant le déploiement,
-# puis stocker les mots de passe dans le secret K8s db-credentials (voir secrets/).
+# --- Authentication -----------------------------------------------------------
+# IMPORTANT: replace all <...> values before deploying,
+# then store the passwords in the db-credentials K8s secret (see secrets/).
 auth:
   postgresPassword: "chagemedev"
   username: "cofrapuser"
@@ -18,10 +18,10 @@ primary:
   persistence:
     enabled: true
     size: 2Gi
-    # storageClass: "" # laisser vide pour utiliser le StorageClass par défaut de K3s (local-path)
+    # storageClass: "" # leave empty to use K3s's default StorageClass (local-path)
 
-  # Schéma initial : exécuté UNE SEULE FOIS à la création du pod PostgreSQL.
-  # Crée la table users utilisée par les trois fonctions COFRAP.
+  # Initial schema: run ONLY ONCE when the PostgreSQL pod is created.
+  # Creates the users table used by the three COFRAP functions.
   initdb:
     scripts:
       01-schema.sql: |
@@ -34,7 +34,7 @@ primary:
             expired   SMALLINT     DEFAULT 0
         );
 
-  # Ressources adaptées à un nœud e2-small (~2 Go RAM)
+  # Resources sized for an e2-small node (~2 GB RAM)
   resources:
     requests:
       memory: "256Mi"
@@ -44,4 +44,4 @@ primary:
       cpu: "500m"
 
 # --- Readiness / liveness ---------------------------------------------------
-# Valeurs par défaut Bitnami conservées — pas de surcharge nécessaire.
+# Bitnami default values kept as-is — no override needed.

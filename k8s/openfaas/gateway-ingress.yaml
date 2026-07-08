@@ -1,16 +1,16 @@
-# Ingress Traefik pour le gateway OpenFaaS
-# K3s embarque Traefik v2 — aucune installation supplémentaire requise.
+# Traefik Ingress for the OpenFaaS gateway
+# K3s bundles Traefik v2 — no additional installation required.
 #
-# Domaine géré via Cloudflare : créer un enregistrement A pointant vers l'IP
-# externe du nœud GCP, avec le proxy Cloudflare activé (nuage orange).
+# Domain managed via Cloudflare: create an A record pointing to the
+# external IP of the GCP node, with the Cloudflare proxy enabled (orange cloud).
 #
-# Remplacer openfaas.cofrap.example.com par le sous-domaine choisi,
-# ex : openfaas.cofrap.example.com
+# Replace openfaas.cofrap.example.com with the chosen subdomain,
+# e.g.: openfaas.cofrap.example.com
 #
-# Mode TLS Cloudflare :
-#   - Flexible (défaut) : Cloudflare ↔ cluster en HTTP → aucune config TLS ici
-#   - Full / Full Strict : Cloudflare ↔ cluster en HTTPS → décommenter la section
-#     tls: ci-dessous et installer cert-manager (voir README étape 3)
+# Cloudflare TLS mode:
+#   - Flexible (default): Cloudflare <-> cluster over HTTP -> no TLS config needed here
+#   - Full / Full Strict: Cloudflare <-> cluster over HTTPS -> uncomment the
+#     tls: section below and install cert-manager (see README step 3)
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -19,7 +19,7 @@ metadata:
   annotations:
     # kubernetes.io/ingress.class: traefik
     traefik.ingress.kubernetes.io/router.middlewares: openfaas-cors-headers@kubernetescrd
-    # Activer uniquement en mode Cloudflare Full/Full Strict (HTTPS vers l'origine)
+    # Enable only in Cloudflare Full/Full Strict mode (HTTPS to the origin)
     # traefik.ingress.kubernetes.io/router.entrypoints: websecure
     # traefik.ingress.kubernetes.io/router.tls: "true"
 spec:
@@ -35,7 +35,7 @@ spec:
                 name: gateway
                 port:
                   number: 8080
-  # Décommenter en mode Cloudflare Full Strict avec cert-manager :
+  # Uncomment in Cloudflare Full Strict mode with cert-manager:
   # tls:
   #   - hosts:
   #       - openfaas.cofrap.example.com

@@ -1,6 +1,6 @@
 name: CI — generate-2fa
 
-# Se déclenche à chaque push ou PR sur ces branches
+# Triggered on every push or PR to these branches
 on:
   push:
     branches:
@@ -17,20 +17,20 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Récupère le code du repo
+      # 1. Checks out the repo code
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2. Installe Python 3.11
+      # 2. Installs Python 3.11
       - name: Setup Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      # 3. Installe les dépendances de la fonction
+      # 3. Installs the function's dependencies
       - name: Install dependencies
         run: pip install -r functions/generate-2fa/requirements.txt
 
-      # 4. Lance le test TOTP (aucune dépendance externe)
+      # 4. Runs the TOTP test (no external dependency)
       - name: Run tests
         run: python functions/generate-2fa/test_totp.py

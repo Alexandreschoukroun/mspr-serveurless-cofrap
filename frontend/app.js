@@ -1,51 +1,51 @@
 /**
- * Application Frontend COFRAP (Vanilla JS)
- * Communication avec OpenFaaS API Gateway via Fetch API.
+ * COFRAP Frontend Application (Vanilla JS)
+ * Communicates with the OpenFaaS API Gateway via the Fetch API.
  */
 
 const app = {
-    // URL du gateway OpenFaaS — surchargeable via config.js monté depuis un ConfigMap k8s
+    // OpenFaaS gateway URL — overridable via config.js mounted from a k8s ConfigMap
     API_BASE_URL: (window.COFRAP_CONFIG && window.COFRAP_CONFIG.OPENFAAS_URL) || "http://openfaas.k3s.homelab/function",
 
-    // Clé de sauvegarde de la préférence "mode daltonien" dans le navigateur
+    // Storage key for the "colorblind mode" preference in the browser
     COLORBLIND_STORAGE_KEY: 'cofrap_colorblind_mode',
 
-    // Initialisation
+    // Initialization
     init() {
         this.bindEvents();
         this.applyColorblindMode(localStorage.getItem(this.COLORBLIND_STORAGE_KEY) || 'none');
-        this.showView('auth'); // Vue par défaut
+        this.showView('auth'); // Default view
     },
 
-    // Gestion des événements
+    // Event handling
     bindEvents() {
-        // Formulaire Créer
+        // Create form
         document.getElementById('form-create').addEventListener('submit', (e) => {
             e.preventDefault();
             this.handleCreateAccount();
         });
 
-        // Formulaire Authentification
+        // Authentication form
         document.getElementById('form-auth').addEventListener('submit', (e) => {
             e.preventDefault();
             this.handleAuthentication();
         });
 
-        // Formulaire Renouveler
+        // Renew form
         document.getElementById('form-renew').addEventListener('submit', (e) => {
             e.preventDefault();
             this.handleRenewal();
         });
     },
 
-    // Navigation entre les vues
+    // Navigation between views
     showView(viewName) {
-        // Masquer toutes les vues
+        // Hide all views
         document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
-        // Afficher la vue demandée
+        // Show the requested view
         document.getElementById(`view-${viewName}`).classList.add('active');
-        
-        // Mettre à jour l'apparence du menu de navigation
+
+        // Update the navigation menu appearance
         document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active', 'fw-bold'));
         const navLink = document.getElementById(`nav-${viewName}`);
         if (navLink) navLink.classList.add('active', 'fw-bold');
@@ -53,7 +53,7 @@ const app = {
         this.hideAlert();
     },
 
-    // Afficher une notification globale (Succès ou Erreur)
+    // Show a global notification (Success or Error)
     showAlert(message, type = 'danger') {
         const alertBox = document.getElementById('global-alert');
         alertBox.className = `alert alert-${type} mt-3`;
@@ -66,8 +66,8 @@ const app = {
         alertBox.classList.add('d-none');
     },
 
-    // Change le mode daltonien parmi : 'none', 'protanopia', 'deuteranopia', 'tritanopia'
-    // et mémorise la préférence pour les prochaines visites.
+    // Changes the colorblind mode among: 'none', 'protanopia', 'deuteranopia', 'tritanopia'
+    // and remembers the preference for future visits.
     setColorblindMode(mode) {
         this.applyColorblindMode(mode);
         localStorage.setItem(this.COLORBLIND_STORAGE_KEY, mode);
@@ -82,7 +82,7 @@ const app = {
         if (select) select.value = mode || 'none';
     },
 
-    // Affiche/masque le mot de passe en clair pour la vue 'create' ou 'renew'
+    // Shows/hides the plaintext password for the 'create' or 'renew' view
     togglePasswordVisibility(view) {
         const container = document.getElementById(`password-plain-${view}`);
         const btn = document.getElementById(`btn-toggle-password-${view}`);
@@ -93,7 +93,7 @@ const app = {
         btn.textContent = isHidden ? 'Masquer le mot de passe en clair' : 'Afficher le mot de passe en clair';
     },
 
-    // Copie le mot de passe en clair dans le presse-papiers
+    // Copies the plaintext password to the clipboard
     async copyPassword(view) {
         const input = document.getElementById(`password-plain-input-${view}`);
         try {
@@ -105,7 +105,7 @@ const app = {
         }
     },
 
-    // Helper pour les appels API
+    // Helper for API calls
     async apiCall(endpoint, payload) {
         try {
             const response = await fetch(`${this.API_BASE_URL}/${endpoint}`, {
@@ -125,10 +125,10 @@ const app = {
     },
 
     // =========================================================
-    // LOGIQUE METIER
+    // BUSINESS LOGIC
     // =========================================================
 
-    // 1. CREER UN COMPTE
+    // 1. CREATE AN ACCOUNT
     async handleCreateAccount() {
         const username = document.getElementById('create-username').value.trim();
         if (!username) return;
@@ -139,21 +139,21 @@ const app = {
         this.hideAlert();
 
         try {
-            // Etape 1 : Générer le mot de passe
+            // Step 1: Generate the password
             const pwdResponse = await this.apiCall('generate-password', { username });
-            
+
             if (!pwdResponse.ok) {
                 throw new Error(pwdResponse.data.message || "Erreur lors de la création de l'utilisateur.");
             }
 
-            // Etape 2 : Générer le 2FA
+            // Step 2: Generate the 2FA
             const mfaResponse = await this.apiCall('generate-2fa', { username });
-            
+
             if (!mfaResponse.ok) {
                 throw new Error(mfaResponse.data.message || "Erreur lors de la génération du 2FA.");
             }
 
-            // Succès : Affichage des QR Codes
+            // Success: display the QR codes
             document.getElementById('qr-password-img').src = `data:image/png;base64,${pwdResponse.data.qr_password}`;
             document.getElementById('qr-2fa-img').src = `data:image/png;base64,${mfaResponse.data.qr_2fa}`;
             document.getElementById('password-plain-input-create').value = pwdResponse.data.password || '';
@@ -164,7 +164,7 @@ const app = {
             document.getElementById('create-qr-container').classList.remove('d-none');
             this.showAlert("Compte créé avec succès. Veuillez scanner vos QR Codes.", "success");
             
-            // On vide le formulaire pour éviter les recréations accidentelles
+            // Clear the form to avoid accidental re-creation
             document.getElementById('form-create').reset();
 
         } catch (error) {
@@ -175,7 +175,7 @@ const app = {
         }
     },
 
-    // 2. AUTHENTIFICATION
+    // 2. AUTHENTICATION
     async handleAuthentication() {
         const username = document.getElementById('auth-username').value.trim();
         const password = document.getElementById('auth-password').value;
@@ -189,19 +189,19 @@ const app = {
         this.hideAlert();
 
         try {
-            // Appel à la fonction d'authentification (déduite de l'architecture)
+            // Call the authentication function (inferred from the architecture)
             const authResponse = await this.apiCall('authenticate', { username, password, totp_code: totp });
 
             if (authResponse.ok) {
                 this.showAlert("Authentification réussie ! Bienvenue.", "success");
-                // Logique post-login (ex: redirection, stockage du JWT, etc.)
+                // Post-login logic (e.g. redirect, store the JWT, etc.)
             } else {
-                // Vérifier si l'erreur est liée à l'expiration (> 6 mois)
-                // Le backend renvoie { "status": "expired" } en HTTP 403
+                // Check whether the error is related to expiration (> 6 months)
+                // The backend returns { "status": "expired" } with HTTP 403
                 const isExpired = authResponse.status === 403 && authResponse.data.status === "expired";
-                
+
                 if (isExpired || (authResponse.data.message && authResponse.data.message.toLowerCase().includes('expiré'))) {
-                    // Bascule vers la vue de renouvellement
+                    // Switch to the renewal view
                     document.getElementById('renew-username').value = username;
                     this.showView('renew');
                     this.showAlert("Votre compte a expiré. Vous devez regénérer vos accès.", "warning");
@@ -217,7 +217,7 @@ const app = {
         }
     },
 
-    // 3. RENOUVELLEMENT (SIMILAIRE A LA CREATION MAIS POUR COMPTE EXISTANT)
+    // 3. RENEWAL (SIMILAR TO CREATION BUT FOR AN EXISTING ACCOUNT)
     async handleRenewal() {
         const username = document.getElementById('renew-username').value.trim();
         if (!username) return;
@@ -228,22 +228,22 @@ const app = {
         this.hideAlert();
 
         try {
-            // Note: Côté backend, il faudrait idéalement un endpoint "renew" spécifique 
-            // ou bien un comportement adapté dans generate-password si l'utilisateur existe déjà.
-            // Pour le TP, s'il faut réutiliser les mêmes fonctions, on simule l'appel :
-            
-            // /!\ Attention : generate-password plante actuellement si l'user existe (UniqueViolation).
-            // Il vous faudra potentiellement adapter le handler backend pour faire un UPDATE 
-            // au lieu d'un INSERT si l'utilisateur est expiré. 
-            // Je fais les appels ici comme demandé par le workflow Front-End.
-            
+            // Note: On the backend side, a dedicated "renew" endpoint would ideally be needed,
+            // or adapted behavior in generate-password when the user already exists.
+            // For this assignment, since the same functions need to be reused, the call is simulated here:
+
+            // /!\ Warning: generate-password currently crashes if the user already exists (UniqueViolation).
+            // The backend handler will potentially need to be adapted to do an UPDATE
+            // instead of an INSERT if the user is expired.
+            // The calls are made here as required by the Front-End workflow.
+
             const pwdResponse = await this.apiCall('generate-password', { username, renew: true });
             if (!pwdResponse.ok) throw new Error(pwdResponse.data.message || "Erreur au renouvellement du mot de passe.");
 
             const mfaResponse = await this.apiCall('generate-2fa', { username });
             if (!mfaResponse.ok) throw new Error(mfaResponse.data.message || "Erreur au renouvellement du 2FA.");
 
-            // Affichage des nouveaux QR Codes
+            // Display the new QR codes
             document.getElementById('renew-qr-password-img').src = `data:image/png;base64,${pwdResponse.data.qr_password}`;
             document.getElementById('renew-qr-2fa-img').src = `data:image/png;base64,${mfaResponse.data.qr_2fa}`;
             document.getElementById('password-plain-input-renew').value = pwdResponse.data.password || '';
@@ -264,7 +264,7 @@ const app = {
     }
 };
 
-// Lancer l'application au chargement du DOM
+// Start the application once the DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     app.init();
 });

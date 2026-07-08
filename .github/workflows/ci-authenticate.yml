@@ -27,6 +27,6 @@ jobs:
       - name: Install dependencies
         run: pip install -r functions/authenticate/requirements.txt
 
-      # SQLite est utilisé comme mock BDD — pas besoin de PostgreSQL
+      # SQLite is used as a mock DB — no need for PostgreSQL
       - name: Run tests
         run: python functions/authenticate/test_local.py

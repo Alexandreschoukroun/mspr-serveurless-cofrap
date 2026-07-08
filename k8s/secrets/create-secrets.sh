@@ -1,19 +1,19 @@
 #!/usr/bin/env bash
-# Crée les deux Secrets Kubernetes nécessaires aux fonctions COFRAP.
-# À exécuter UNE SEULE FOIS après l'installation du cluster.
+# Creates the two Kubernetes Secrets required by the COFRAP functions.
+# Run ONLY ONCE after the cluster installation.
 #
-# Usage :
+# Usage:
 #   chmod +x create-secrets.sh
 #   ./create-secrets.sh
 #
-# Prérequis : kubectl configuré sur le bon contexte K3s.
+# Prerequisite: kubectl configured on the correct K3s context.
 
 set -euo pipefail
 
 NAMESPACE="openfaas-fn"
 
 # ---------------------------------------------------------------------------
-# Vérification du namespace
+# Namespace check
 # ---------------------------------------------------------------------------
 if ! kubectl get namespace "$NAMESPACE" &>/dev/null; then
   echo "[ERREUR] Le namespace '$NAMESPACE' n'existe pas."
@@ -22,8 +22,8 @@ if ! kubectl get namespace "$NAMESPACE" &>/dev/null; then
 fi
 
 # ---------------------------------------------------------------------------
-# Saisie interactive des valeurs sensibles
-# (évite de les écrire dans un fichier ou l'historique shell)
+# Interactive input of sensitive values
+# (avoids writing them to a file or the shell history)
 # ---------------------------------------------------------------------------
 echo "=== Secret : db-credentials ==="
 read -rp "DB_HOST (ex: postgresql.openfaas-fn.svc.cluster.local) : " DB_HOST
@@ -40,9 +40,9 @@ echo "Clé générée (à conserver en lieu sûr) : $FERNET_KEY"
 echo ""
 
 # ---------------------------------------------------------------------------
-# Création des Secrets via kubectl
-# --from-literal crée un Secret dont chaque clé = un fichier dans le pod.
-# OpenFaaS monte ces fichiers dans /var/openfaas/secrets/.
+# Creating the Secrets via kubectl
+# --from-literal creates a Secret where each key = a file in the pod.
+# OpenFaaS mounts these files under /var/openfaas/secrets/.
 # ---------------------------------------------------------------------------
 kubectl create secret generic db-credentials \
   --namespace="$NAMESPACE" \

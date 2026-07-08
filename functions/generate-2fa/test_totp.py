@@ -1,22 +1,22 @@
 """
-Test local du TOTP — sans BDD, sans OpenFaaS
-Lance avec : python test_totp.py
+Local TOTP test — no DB, no OpenFaaS
+Run with: python test_totp.py
 """
 import pyotp
 
-# --- Étape 1 : génération du secret (ce que fait generate-2fa) ---
+# --- Step 1: secret generation (what generate-2fa does) ---
 secret = pyotp.random_base32()
-print("Secret généré    :", secret)
+print("Generated secret :", secret)
 
-# --- Étape 2 : génération du code (ce que fait Google Authenticator) ---
+# --- Step 2: code generation (what Google Authenticator does) ---
 totp = pyotp.TOTP(secret)
 code = totp.now()
-print("Code actuel      :", code)
+print("Current code     :", code)
 
-# --- Étape 3 : vérification (ce que fera authenticate) ---
+# --- Step 3: verification (what authenticate will do) ---
 valide = totp.verify(code)
-print("Code valide ?    :", valide)  # doit afficher True
+print("Code valid?      :", valide)  # should print True
 
-# --- Étape 4 : test avec un mauvais code ---
+# --- Step 4: test with a wrong code ---
 faux_code = "000000"
-print("Faux code valide ?", totp.verify(faux_code))  # doit afficher False
+print("Wrong code valid?", totp.verify(faux_code))  # should print False

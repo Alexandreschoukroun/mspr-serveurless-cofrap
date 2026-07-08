@@ -1,12 +1,12 @@
-# Helm values pour le chart openfaas/openfaas
-# Repo : https://openfaas.github.io/faas-netes/
+# Helm values for the openfaas/openfaas chart
+# Repo: https://openfaas.github.io/faas-netes/
 #
-# Optimisé pour un cluster K3s sur 2 VMs GCP e2-small.
-# Prometheus/Alertmanager désactivés pour économiser les ressources.
+# Optimized for a K3s cluster on 2 GCP e2-small VMs.
+# Prometheus/Alertmanager disabled to save resources.
 
-# --- Authentification -------------------------------------------------------
-# Génère automatiquement un secret basic-auth (user: admin, mdp: aléatoire).
-# Récupérer le mot de passe après install :
+# --- Authentication -----------------------------------------------------------
+# Automatically generates a basic-auth secret (user: admin, password: random).
+# Retrieve the password after install:
 #   kubectl get secret -n openfaas basic-auth \
 #     -o jsonpath="{.data.basic-auth-password}" | base64 -d
 generateBasicAuth: true
@@ -17,31 +17,31 @@ functionNamespace: openfaas-fn
 # --- Gateway ----------------------------------------------------------------
 gateway:
   replicas: 1
-  # Timeouts : upstreamTimeout doit être < readTimeout/writeTimeout
+  # Timeouts: upstreamTimeout must be < readTimeout/writeTimeout
   readTimeout: "65s"
   writeTimeout: "65s"
   upstreamTimeout: "60s"
-  # Désactive le TLS interne gateway→function (géré par Traefik en entrée)
+  # Disables internal gateway->function TLS (handled by Traefik at the entry point)
   directFunctions: true
 
-# --- Contrôleur faas-netes (mode standard, sans CRD operator) ---------------
+# --- faas-netes controller (standard mode, no CRD operator) -----------------
 operator:
   create: false
 
 faasnetes:
   imagePullPolicy: "Always"
 
-# --- Monitoring (désactivé sur petit cluster) --------------------------------
-# Réactiver si besoin d'alertes ou de dashboards Grafana.
+# --- Monitoring (disabled on small cluster) ----------------------------------
+# Re-enable if alerts or Grafana dashboards are needed.
 alertmanager:
   create: false
 
 prometheus:
   create: false
 
-# --- Scaling automatique ----------------------------------------------------
-# Min replicas = 0 permet de scale-to-zero (économie de ressources).
-# Les fonctions démarrent en ~2s au premier appel.
+# --- Automatic scaling --------------------------------------------------------
+# Min replicas = 0 enables scale-to-zero (resource savings).
+# Functions start in ~2s on the first call.
 faasIdler:
   create: true
   inactivityDuration: "5m"

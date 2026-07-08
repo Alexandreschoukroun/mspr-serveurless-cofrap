@@ -1,16 +1,16 @@
 """
-Test local sans OpenFaaS ni PostgreSQL.
-Lance avec : python test_local.py
+Local test without OpenFaaS or PostgreSQL.
+Run with: python test_local.py
 """
 import json
 import os
 import base64
 from cryptography.fernet import Fernet
 
-# Génère une clé Fernet temporaire pour le test
+# Generates a temporary Fernet key for the test
 key = Fernet.generate_key().decode()
 
-# Variables d'environnement simulant les secrets K8s
+# Environment variables simulating K8s secrets
 os.environ["FERNET_KEY"] = key
 os.environ["DB_HOST"] = "localhost"
 os.environ["DB_NAME"] = "cofrapdb"
@@ -26,7 +26,7 @@ class FakeContext:
     pass
 
 
-# Patch psycopg2 pour éviter la connexion réelle
+# Patch psycopg2 to avoid a real connection
 import unittest.mock as mock
 
 fake_cursor = mock.MagicMock()
@@ -44,7 +44,7 @@ body = json.loads(result["body"])
 print("Status      :", body["status"])
 print("QR password : [base64 PNG,", len(body.get("qr_password", "")), "chars]")
 
-# Vérifie que le QR est un PNG valide
+# Checks that the QR code is a valid PNG
 qr_bytes = base64.b64decode(body["qr_password"])
-assert qr_bytes[:4] == b"\x89PNG", "Le QR code n'est pas un PNG valide"
-print("PNG valide  : OK")
+assert qr_bytes[:4] == b"\x89PNG", "The QR code is not a valid PNG"
+print("Valid PNG   : OK")
