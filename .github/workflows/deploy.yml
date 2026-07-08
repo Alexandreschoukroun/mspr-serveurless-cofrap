@@ -8,6 +8,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
+  IMAGE_TAG: ${{ github.run_id }}
 
 jobs:
   # ── Build + Push ────────────────────────────────────────────────────────────
@@ -46,10 +47,10 @@ jobs:
         run: faas-cli push -f stack.yml
 
       - name: Build frontend image
-        run: docker build -t ghcr.io/alexandreschoukroun/cofrap-frontend:latest frontend/
+        run: docker build -t ghcr.io/alexandreschoukroun/cofrap-frontend:${{ env.IMAGE_TAG }} frontend/
 
       - name: Push frontend image
-        run: docker push ghcr.io/alexandreschoukroun/cofrap-frontend:latest
+        run: docker push ghcr.io/alexandreschoukroun/cofrap-frontend:${{ env.IMAGE_TAG }}
 
   # ── Deploy ──────────────────────────────────────────────────────────────────
   deploy:
@@ -109,6 +110,7 @@ jobs:
 
       - name: Deploy frontend to k3s
         run: |
+          sed -i "s/IMAGE_TAG_PLACEHOLDER/${IMAGE_TAG}/g" k8s/frontend/deployment.yaml
           kubectl apply -f k8s/frontend/namespace.yaml
           kubectl apply -f k8s/frontend/configmap.yaml
           kubectl apply -f k8s/frontend/deployment.yaml

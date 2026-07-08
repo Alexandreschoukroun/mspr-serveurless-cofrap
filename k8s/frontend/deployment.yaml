@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: ghcr.io/alexandreschoukroun/cofrap-frontend:latest
+          image: ghcr.io/alexandreschoukroun/cofrap-frontend:IMAGE_TAG_PLACEHOLDER
           imagePullPolicy: Always
           ports:
             - containerPort: 80
