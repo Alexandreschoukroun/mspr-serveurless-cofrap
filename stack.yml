@@ -7,7 +7,7 @@ functions:
   generate-password:
     lang: python3-http
     handler: ./functions/generate-password
-    image: ghcr.io/alexandreschoukroun/generate-password:latest
+    image: ghcr.io/alexandreschoukroun/generate-password:${IMAGE_TAG:-latest}
     imagePullPolicy: Always
     secrets:
       - db-credentials
@@ -16,7 +16,7 @@ functions:
   generate-2fa:
     lang: python3-http
     handler: ./functions/generate-2fa
-    image: ghcr.io/alexandreschoukroun/generate-2fa:latest
+    image: ghcr.io/alexandreschoukroun/generate-2fa:${IMAGE_TAG:-latest}
     imagePullPolicy: Always
     secrets:
       - db-credentials
@@ -25,7 +25,7 @@ functions:
   authenticate:
     lang: python3-http
     handler: ./functions/authenticate
-    image: ghcr.io/alexandreschoukroun/authenticate:latest
+    image: ghcr.io/alexandreschoukroun/authenticate:${IMAGE_TAG:-latest}
     imagePullPolicy: Always
     secrets:
       - db-credentials
