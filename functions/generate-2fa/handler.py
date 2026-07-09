@@ -1,20 +1,20 @@
 # =============================================================================
-# Fonction OpenFaaS : generate-2fa
-# Rôle : Générer un secret TOTP pour un utilisateur existant,
-#        le chiffrer en BDD et retourner un QR code compatible Google Authenticator
+# OpenFaaS function: generate-2fa
+# Role: Generate a TOTP secret for an existing user,
+#        encrypt it in the DB and return a Google Authenticator-compatible QR code
 #
-# Entrée  (JSON) : { "username": "alice" }
-# Sortie  (JSON) : { "qr_2fa": "<base64 PNG>", "status": "ok" }
+# Input   (JSON) : { "username": "alice" }
+# Output  (JSON) : { "qr_2fa": "<base64 PNG>", "status": "ok" }
 #
-# Flux complet :
-#   1. Reçoit un username (l'utilisateur doit déjà exister en BDD)
-#   2. Génère un secret TOTP aléatoire (32 caractères base32)
-#   3. Chiffre ce secret avec Fernet avant de le stocker en BDD
-#   4. Met à jour la colonne mfa de l'utilisateur dans PostgreSQL
-#   5. Génère un QR code au format otpauth:// (compatible Google Authenticator)
-#   6. Retourne le QR code encodé en base64
+# Full flow:
+#   1. Receives a username (the user must already exist in the DB)
+#   2. Generates a random TOTP secret (32 base32 characters)
+#   3. Encrypts this secret with Fernet before storing it in the DB
+#   4. Updates the user's mfa column in PostgreSQL
+#   5. Generates a QR code in otpauth:// format (compatible with Google Authenticator)
+#   6. Returns the QR code encoded in base64
 #
-# Cette fonction est appelée APRÈS generate-password lors de la création de compte.
+# This function is called AFTER generate-password during account creation.
 # =============================================================================
 
 import json
@@ -27,7 +27,7 @@ import pyotp
 import qrcode
 from cryptography.fernet import Fernet
 
-# Nom de l'application affiché dans Google Authenticator
+# Application name shown in Google Authenticator
 ISSUER = "COFRAP"
 
 _conn = None
@@ -35,8 +35,8 @@ _conn = None
 
 def _read_secret(key: str) -> str:
     """
-    Lit une valeur sensible depuis les secrets Kubernetes montés par OpenFaaS.
-    Fallback sur les variables d'environnement pour les tests locaux.
+    Reads a sensitive value from the Kubernetes secrets mounted by OpenFaaS.
+    Falls back to environment variables for local tests.
     """
     path = f"/var/openfaas/secrets/{key}"
     try:
@@ -48,7 +48,7 @@ def _read_secret(key: str) -> str:
 
 def _get_db():
     """
-    Retourne une connexion PostgreSQL active, réutilisée entre les appels.
+    Returns an active PostgreSQL connection, reused across calls.
     """
     global _conn
     if _conn is None or _conn.closed:
@@ -64,11 +64,11 @@ def _get_db():
 
 def handle(event, context):
     """
-    Point d'entrée appelé par OpenFaaS à chaque requête HTTP POST.
+    Entry point called by OpenFaaS on every HTTP POST request.
     """
 
     # ------------------------------------------------------------------
-    # ÉTAPE 1 — Lecture et validation du corps de la requête
+    # STEP 1 — Read and validate the request body
     # ------------------------------------------------------------------
     try:
         body = json.loads(event.body)
@@ -80,25 +80,25 @@ def handle(event, context):
         return {"statusCode": 400, "body": json.dumps({"status": "error", "message": "username requis"})}
 
     # ------------------------------------------------------------------
-    # ÉTAPE 2 — Génération du secret TOTP
-    # pyotp.random_base32() génère une clé secrète de 32 caractères base32.
-    # C'est cette clé qui est partagée entre le serveur et l'app d'auth (Google Authenticator).
-    # À partir de cette clé + l'heure actuelle, on calcule un code à 6 chiffres valide 30s.
+    # STEP 2 — Generate the TOTP secret
+    # pyotp.random_base32() generates a 32-character base32 secret key.
+    # This is the key shared between the server and the auth app (Google Authenticator).
+    # From this key + the current time, a 6-digit code valid for 30s is computed.
     # ------------------------------------------------------------------
     totp_secret = pyotp.random_base32()
 
     # ------------------------------------------------------------------
-    # ÉTAPE 3 — Chiffrement du secret TOTP avec Fernet
-    # Le secret TOTP ne doit jamais être stocké en clair en BDD.
-    # La clé Fernet vient du secret K8s "encryption-key" → fichier FERNET_KEY.
+    # STEP 3 — Encrypt the TOTP secret with Fernet
+    # The TOTP secret must never be stored in plaintext in the DB.
+    # The Fernet key comes from the K8s secret "encryption-key" -> FERNET_KEY file.
     # ------------------------------------------------------------------
     fernet = Fernet(_read_secret("FERNET_KEY").encode())
     encrypted_secret = fernet.encrypt(totp_secret.encode()).decode()
 
     # ------------------------------------------------------------------
-    # ÉTAPE 4 — Mise à jour de la colonne mfa en base de données
-    # On UPDATE (et non INSERT) car l'utilisateur a déjà été créé par generate-password.
-    # Si l'utilisateur n'existe pas, rowcount == 0 → on retourne une erreur.
+    # STEP 4 — Update the mfa column in the database
+    # UPDATE (not INSERT) since the user was already created by generate-password.
+    # If the user doesn't exist, rowcount == 0 -> an error is returned.
     # ------------------------------------------------------------------
     try:
         conn = _get_db()
@@ -107,7 +107,7 @@ def handle(event, context):
                 "UPDATE users SET mfa = %s WHERE username = %s",
                 (encrypted_secret, username),
             )
-            # rowcount indique le nombre de lignes modifiées
+            # rowcount indicates the number of rows modified
             if cur.rowcount == 0:
                 conn.rollback()
                 return {"statusCode": 404, "body": json.dumps({"status": "error", "message": "Utilisateur introuvable"})}
@@ -116,12 +116,12 @@ def handle(event, context):
         return {"statusCode": 500, "body": json.dumps({"status": "error", "message": str(e)})}
 
     # ------------------------------------------------------------------
-    # ÉTAPE 5 — Génération du QR code au format otpauth://
-    # Ce format est le standard reconnu par Google Authenticator, Authy, etc.
-    # L'URL encode : le secret TOTP, l'issuer (COFRAP) et le nom du compte.
-    # L'utilisateur scanne ce QR avec son app d'authentification.
+    # STEP 5 — Generate the QR code in otpauth:// format
+    # This format is the standard recognized by Google Authenticator, Authy, etc.
+    # The URL encodes: the TOTP secret, the issuer (COFRAP), and the account name.
+    # The user scans this QR code with their authenticator app.
     # ------------------------------------------------------------------
-    # Exemple d'URL générée : otpauth://totp/COFRAP:alice?secret=JBSWY3DPEHPK3PXP&issuer=COFRAP
+    # Example generated URL: otpauth://totp/COFRAP:alice?secret=JBSWY3DPEHPK3PXP&issuer=COFRAP
     otp_uri = pyotp.totp.TOTP(totp_secret).provisioning_uri(
         name=username,
         issuer_name=ISSUER,
@@ -132,14 +132,14 @@ def handle(event, context):
     qr.make(fit=True)
     img = qr.make_image(fill_color="black", back_color="white")
 
-    # Encodage en base64 en mémoire (pas d'écriture sur disque)
+    # Base64 encoding in memory (no disk write)
     buf = io.BytesIO()
     img.save(buf, format="PNG")
     qr_b64 = base64.b64encode(buf.getvalue()).decode()
 
     # ------------------------------------------------------------------
-    # ÉTAPE 6 — Réponse JSON au frontend
-    # Le frontend affiche le QR avec : <img src="data:image/png;base64,{qr_2fa}">
+    # STEP 6 — JSON response to the frontend
+    # The frontend displays the QR code with: <img src="data:image/png;base64,{qr_2fa}">
     # ------------------------------------------------------------------
     return {
         "statusCode": 200,

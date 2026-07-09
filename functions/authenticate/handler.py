@@ -1,18 +1,18 @@
 # =============================================================================
-# Fonction OpenFaaS : authenticate
-# Rôle : Vérifier l'identité d'un utilisateur (mot de passe + TOTP + expiration)
+# OpenFaaS function: authenticate
+# Role: Verify a user's identity (password + TOTP + expiration)
 #
-# Entrée  (JSON) : { "username": "alice", "password": "...", "totp_code": "123456" }
-# Sortie  (JSON) : { "status": "ok"|"expired"|"error", "message": "..." }
+# Input   (JSON) : { "username": "alice", "password": "...", "totp_code": "123456" }
+# Output  (JSON) : { "status": "ok"|"expired"|"error", "message": "..." }
 #
-# Flux complet :
-#   1. Reçoit username + password + totp_code via POST HTTP
-#   2. Récupère la ligne utilisateur en BDD
-#   3. Déchiffre le mot de passe stocké (Fernet) et compare avec la saisie
-#   4. Déchiffre le secret TOTP (Fernet) et vérifie le code TOTP fourni
-#   5. Vérifie que le compte n'a pas expiré (> 6 mois depuis gendate)
-#      → Si expiré : marque expired=1 en BDD, retourne {"status": "expired"}
-#      → Si valide  : retourne {"status": "ok"}
+# Full flow:
+#   1. Receives username + password + totp_code via POST HTTP
+#   2. Fetches the user row from the DB
+#   3. Decrypts the stored password (Fernet) and compares it with the input
+#   4. Decrypts the TOTP secret (Fernet) and verifies the provided TOTP code
+#   5. Checks that the account hasn't expired (> 6 months since gendate)
+#      -> If expired: marks expired=1 in the DB, returns {"status": "expired"}
+#      -> If valid  : returns {"status": "ok"}
 # =============================================================================
 
 import json
@@ -24,17 +24,17 @@ import psycopg2
 import pyotp
 from cryptography.fernet import Fernet, InvalidToken
 
-# Durée de vie d'un compte : 183 jours (≈ 6 mois)
+# Account lifetime: 183 days (approx. 6 months)
 ACCOUNT_TTL_SECONDS = 183 * 24 * 3600
 
-# Connexion PostgreSQL réutilisée entre les appels (OpenFaaS garde le process actif)
+# PostgreSQL connection reused across calls (OpenFaaS keeps the process alive)
 _conn = None
 
 
 def _read_secret(key: str) -> str:
     """
-    Lit une valeur sensible depuis les secrets Kubernetes montés par OpenFaaS.
-    Fallback sur les variables d'environnement pour les tests locaux.
+    Reads a sensitive value from the Kubernetes secrets mounted by OpenFaaS.
+    Falls back to environment variables for local tests.
     """
     path = f"/var/openfaas/secrets/{key}"
     try:
@@ -46,8 +46,8 @@ def _read_secret(key: str) -> str:
 
 def _get_db():
     """
-    Retourne une connexion PostgreSQL active.
-    Crée la connexion si elle n'existe pas encore ou si elle a été fermée.
+    Returns an active PostgreSQL connection.
+    Creates the connection if it doesn't exist yet or if it was closed.
     """
     global _conn
     if _conn is None or _conn.closed:
@@ -63,11 +63,11 @@ def _get_db():
 
 def handle(event, context):
     """
-    Point d'entrée appelé par OpenFaaS à chaque requête HTTP POST.
+    Entry point called by OpenFaaS on every HTTP POST request.
     """
 
     # ------------------------------------------------------------------
-    # ÉTAPE 1 — Lecture et validation du corps de la requête
+    # STEP 1 — Read and validate the request body
     # ------------------------------------------------------------------
     try:
         body = json.loads(event.body)
@@ -81,7 +81,7 @@ def handle(event, context):
         return {"statusCode": 400, "body": json.dumps({"status": "error", "message": "username, password et totp_code requis"})}
 
     # ------------------------------------------------------------------
-    # ÉTAPE 2 — Récupération de l'utilisateur en base de données
+    # STEP 2 — Fetch the user from the database
     # ------------------------------------------------------------------
     try:
         conn = _get_db()
@@ -94,16 +94,16 @@ def handle(event, context):
     except Exception as e:
         return {"statusCode": 500, "body": json.dumps({"status": "error", "message": str(e)})}
 
-    # Message générique pour ne pas révéler si le compte existe
+    # Generic message so as not to reveal whether the account exists
     if row is None:
         return {"statusCode": 401, "body": json.dumps({"status": "error", "message": "Identifiants incorrects"})}
 
     db_password_enc, db_mfa_enc, gendate, expired_flag = row
 
     # ------------------------------------------------------------------
-    # ÉTAPE 3 — Vérification du mot de passe
-    # On déchiffre le mot de passe stocké puis on compare avec hmac.compare_digest
-    # pour éviter les attaques par timing sur la comparaison de chaînes.
+    # STEP 3 — Password verification
+    # Decrypts the stored password then compares it with hmac.compare_digest
+    # to avoid timing attacks on the string comparison.
     # ------------------------------------------------------------------
     fernet = Fernet(_read_secret("FERNET_KEY").encode())
     try:
@@ -115,10 +115,10 @@ def handle(event, context):
         return {"statusCode": 401, "body": json.dumps({"status": "error", "message": "Identifiants incorrects"})}
 
     # ------------------------------------------------------------------
-    # ÉTAPE 4 — Vérification du code TOTP
-    # On déchiffre le secret TOTP stocké, puis on vérifie le code avec pyotp.
-    # pyotp.TOTP.verify() accepte une fenêtre ±30 s pour compenser les décalages
-    # d'horloge entre le smartphone et le serveur.
+    # STEP 4 — TOTP code verification
+    # Decrypts the stored TOTP secret, then verifies the code with pyotp.
+    # pyotp.TOTP.verify() accepts a ±30s window to compensate for clock
+    # drift between the smartphone and the server.
     # ------------------------------------------------------------------
     try:
         db_mfa_secret = fernet.decrypt(db_mfa_enc.encode()).decode()
@@ -130,9 +130,9 @@ def handle(event, context):
         return {"statusCode": 401, "body": json.dumps({"status": "error", "message": "Code TOTP invalide"})}
 
     # ------------------------------------------------------------------
-    # ÉTAPE 5 — Vérification de l'expiration du compte (6 mois)
-    # Si le compte est déjà marqué expired=1 ou si la date de création
-    # dépasse 183 jours, on force expired=1 en BDD et on refuse la connexion.
+    # STEP 5 — Account expiration check (6 months)
+    # If the account is already marked expired=1 or if the creation date
+    # exceeds 183 days, forces expired=1 in the DB and refuses the login.
     # ------------------------------------------------------------------
     now = int(time.time())
     account_expired = bool(expired_flag) or (now - gendate) > ACCOUNT_TTL_SECONDS
@@ -158,7 +158,7 @@ def handle(event, context):
         }
 
     # ------------------------------------------------------------------
-    # ÉTAPE 6 — Authentification réussie
+    # STEP 6 — Successful authentication
     # ------------------------------------------------------------------
     return {
         "statusCode": 200,
